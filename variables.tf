@@ -133,14 +133,18 @@ locals {
   ]))
 
   all = {
-    for name, image in data.aws_ami.all : name => {
-      ami_name        = image.name
-      ami_id          = image.id
-      ami_version     = lookup(image.tags, "AmiVersion", "")
-      source_ami_name = lookup(image.tags, "SourceAmiName", "")
-      source_ami_id   = lookup(image.tags, "SourceAmiId", "")
-      ssh_username    = lookup(image.tags, "SshUsername", "")
-      build_region    = lookup(image.tags, "BuildRegion", "")
-    }
+    for group in distinct([
+      for name, image in data.aws_ami.all : replace(name, "/-\\d+\\.\\d+\\.\\d+/", "")
+      ]) : group => flatten([
+      for name, image in data.aws_ami.all : [{
+        ami_name        = image.name
+        ami_id          = image.id
+        ami_version     = lookup(image.tags, "AmiVersion", "")
+        source_ami_name = lookup(image.tags, "SourceAmiName", "")
+        source_ami_id   = lookup(image.tags, "SourceAmiId", "")
+        ssh_username    = lookup(image.tags, "SshUsername", "")
+        build_region    = lookup(image.tags, "BuildRegion", "")
+      }] if group == replace(name, "/-\\d+\\.\\d+\\.\\d+/", "")
+    ])
   }
 }
