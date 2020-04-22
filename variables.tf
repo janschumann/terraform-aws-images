@@ -131,4 +131,16 @@ locals {
   image_permissions = toset(flatten([
     for image in data.aws_ami.all : formatlist("%s||%s", image["id"], lookup(local.image_permission_definitions, replace(image["name"], "/-\\d+\\.\\d+\\.\\d+/", ""), []))
   ]))
+
+  all = {
+    for name, image in data.aws_ami.all : name => {
+      ami_name        = image.name
+      ami_id          = image.id
+      ami_version     = lookup(image.tags, "AmiVersion", "")
+      source_ami_name = lookup(image.tags, "SourceAmiName", "")
+      source_ami_id   = lookup(image.tags, "SourceAmiId", "")
+      ssh_username    = lookup(image.tags, "SshUsername", "")
+      build_region    = lookup(image.tags, "BuildRegion", "")
+    }
+  }
 }
