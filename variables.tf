@@ -6,7 +6,7 @@ variable "default_allowed_accounts" {
 
 variable "default_build_instance_type" {
   type    = string
-  default = "t2.micro"
+  default = "t3.large"
 }
 
 variable "default_build_profile" {

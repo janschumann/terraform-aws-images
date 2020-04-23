@@ -146,6 +146,7 @@ class Images:
                     "ssh_username": image_definition.get("source_ami_user"),
                     "instance_type": image_definition.get("instance_type"),
                     "iam_instance_profile": image_definition.get("iam_instance_profile"),
+                    "ami_users": image_definition.get("allowed_accounts"),
                     "run_tags": image_definition.get("run_tags"),
                     "tags": {},
                 }
