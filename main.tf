@@ -1,9 +1,9 @@
-data "external" "image_configs" {
-  program = [local.python, format("%s/resources/packerize.py", path.module)]
+data "external" "packer_configs" {
+  program = [var.python_executeable, format("%s/packerize.py", path.module)]
 
   query = {
-    current_images    = jsonencode(local.current)
-    image_definitions = jsonencode(local.image_definitions)
+    current_images    = jsonencode(local.current_amis)
+    image_definitions = jsonencode(local.image_builder_config)
   }
 }
 
@@ -18,12 +18,18 @@ resource "local_file" "packer" {
   }
 
   provisioner "local-exec" {
-    command = local.packer_build ? format("packer build packer_%s.json && rm packer_%s.json", each.key, each.key) : "echo build disabled"
+    command = ! var.debug ? format("%s build packer_%s.json && rm packer_%s.json", var.packer_executeable, each.key, each.key) : "echo build disabled"
   }
 }
 
-resource "aws_ami_launch_permission" "permissions" {
-  for_each   = local.image_permissions
-  account_id = split("||", each.value)[1]
-  image_id   = split("||", each.value)[0]
+resource "local_file" "image_versions" {
+  content = jsonencode({
+    for name, conf in local.latest_amis : name => conf["ami_version"] if conf["ami_version"] != ""
+  })
+  filename = ".terraform/tmp_image_versions.json"
+
+  # only write versions file if an ami has changed
+  provisioner "local-exec" {
+    command = local.has_changes ? "exit 0" : format("jq . .terraform/tmp_image_versions.json > %s", var.image_versions_path)
+  }
 }

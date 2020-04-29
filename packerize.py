@@ -153,7 +153,14 @@ class Images:
 
                 # do not add aws profile while deploying from jenkins
                 if not (os.environ.get('IS_DEPLOYMENT', 'false') == 'true'):
-                    builder.update({"profile": image_definition.get("profile")})
+                    if image_definition.get("profile", "") != "":
+                        builder.update({"profile": image_definition.get("profile")})
+                    else:
+                        builder.update({"access_key": image_definition.get("access_key")})
+                        builder.update({"secret_key": image_definition.get("secret_key")})
+                        if image_definition.get("token", "") != "":
+                            builder.update({"token": image_definition.get("token")})
+
 
                 overrides.update({changed.name: {
                     "execute_command": "echo '{}' | sudo -S sh '{{{{.Path}}}}'".format(image_definition.get("source_ami_user"))
