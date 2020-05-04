@@ -72,15 +72,24 @@ locals {
   )
 
   # create the complete builder config by replacing each image config with the merged version
-  image_builder_config = flatten([
-    for def in var.images : merge(
-      def,
-      {
-        images = [for image in local.images : image if image["group_name"] == def["name"]]
-      }
-    )
-  ])
-
+  image_builder_config = concat(
+    flatten([
+      for def in var.images : merge(
+        def,
+        {
+          images = [for image in local.images : image if image["group_name"] == def["name"]]
+        }
+      )
+    ]),
+    flatten([
+      for def in var.source_images : merge(
+        def,
+        {
+          images = [for image in local.images : image if image["group_name"] == "aws_source_images"]
+        }
+      )
+    ])
+  )
   # current data source should only search for images that we maintain
   current_search_items = {
     for image in local.images : image["name"] => image if image["version"] != "0.0.0"

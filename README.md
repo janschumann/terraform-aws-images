@@ -39,7 +39,7 @@ version.
 
 ```hcl
 module "images" {
-  source = "git@elbstack-git.de:qcx-ops/terraform-aws-images.git"
+  source = "janschumann/terraform-aws-images"
 
   default_allowed_accounts = [
     "1234567890",

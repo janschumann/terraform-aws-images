@@ -22,11 +22,16 @@ class Image:
     def has_parent(self):
         return self.parent is not None and self.parent.has_current()
 
+    def set_parent(self, parent):
+        if parent != None:
+            self.parent = parent
+            parent.add_child(self)
+
     def add_child(self, image_obj):
         self.children.append(image_obj)
 
     def version_changed(self):
-        return self.has_version() and self.version != self.current.get("ami_version")
+        return self.version != "n/a" and self.has_version() and self.version != self.current.get("ami_version")
 
     def ami_changed(self):
         return self.has_parent() and self.current.get("source_ami_id") != self.parent.current.get("ami_id")
@@ -44,15 +49,12 @@ class Images:
         self.changed_images = {}
         self.packer = {}
 
-    def _has_source_ami(self, definition):
-        return definition.get("source_ami_name", "") != "" and definition.get("source_ami_name") in self.images
-
     def _propagate(self):
         self.images = {}
         for defined_image in self.defined_images:
             for image_definition in defined_image.get("images"):
                 if image_definition.get("name") in self.images:
-                    print("Duplicate declaration: {}".format(image_definition.get("name")))
+                    continue
 
                 image = Image(image_definition.get("name"), image_definition.get("description"),
                               image_definition.get("version", None))
@@ -64,16 +66,16 @@ class Images:
 
         for defined_image in self.defined_images:
             for image_definition in defined_image.get("images"):
-                leaf = self.images.get(image_definition.get("name"))
-                if self._has_source_ami(image_definition):
-                    parent = self.images.get(image_definition.get("source_ami_name"))
-                    leaf.parent = parent
-                    parent.add_child(leaf)
+                image = self.images.get(image_definition.get("name"))
+                image.set_parent(self.images.get(image_definition.get("source_ami_name")))
 
     def _propagate_changed(self):
         self.changed_images = {}
         images = list(self.images.values())
-        image = images.pop()
+        image = None
+        if len(images) > 0:
+            image = images.pop()
+
         while image:
             if image.has_changed():
                 while image.has_parent() and image.parent.has_changed():
@@ -137,6 +139,8 @@ class Images:
                     continue
 
                 changed = self.changed_images.get(image_definition.get("name"))
+
+
                 if changed.ami_changed() and not changed.version_changed():
                     changed.version = str(semver.parse_version_info(changed.version).bump_minor())
 
@@ -205,13 +209,17 @@ def read_in():
     return {x.strip() for x in sys.stdin}
 
 
+current = {}
+definitions = {}
+
 lines = read_in()
-input = {}
 for line in lines:
     if line:
-        input = json.loads(line)
-        images = Images(json.loads(input["current_images"]), json.loads(input["image_definitions"]))
-        images.build_config()
-        sys.stdout.write(json.dumps(images.packer))
+        sys_input = json.loads(line)
+        current = json.loads(sys_input["current_images"])
+        definitions = json.loads(sys_input["image_definitions"])
 
+images = Images(current, definitions)
+images.build_config()
+sys.stdout.write(json.dumps(images.packer))
 
