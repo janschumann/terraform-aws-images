@@ -1,4 +1,5 @@
-data "aws_region" "current" {}
+data "aws_region" "current" {
+}
 
 data "aws_ami" "current" {
   for_each = local.current_search_items
